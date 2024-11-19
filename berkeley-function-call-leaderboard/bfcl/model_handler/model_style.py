@@ -10,5 +10,4 @@ class ModelStyle(Enum):
     FIREWORK_AI = "firework_ai"
     NEXUS = "nexus"
     OSSMODEL = "ossmodel"
-    HERMES = "hermes"
     COHERE = "cohere"

@@ -231,7 +231,6 @@ def convert_to_tool(functions, mapping, model_style):
             ModelStyle.Anthropic,
             ModelStyle.Google,
             ModelStyle.OSSMODEL,
-            ModelStyle.HERMES,
         ]:
             oai_tool.append(item)
         elif model_style == ModelStyle.COHERE:
