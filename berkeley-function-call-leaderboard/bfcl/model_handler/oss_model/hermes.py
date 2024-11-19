@@ -1,9 +1,21 @@
 from bfcl.model_handler.oss_model.base_oss_handler import OSSHandler
-from bfcl.model_handler.utils import convert_to_tool, func_doc_language_specific_pre_processing
+from bfcl.model_handler.utils import (
+    convert_to_tool,
+    func_doc_language_specific_pre_processing,
+)
 from bfcl.model_handler.constant import GORILLA_TO_OPENAPI
 from bfcl.model_handler.model_style import ModelStyle
 import json
+import ast
 import inspect
+
+
+def parse_tool_call(tool_call: str) -> dict:
+    # hermes-style models can return either JSON or Python repr() strings
+    try:
+        return json.loads(tool_call)
+    except json.JSONDecodeError:
+        return ast.literal_eval(tool_call)
 
 
 class HermesHandler(OSSHandler):
@@ -15,7 +27,7 @@ class HermesHandler(OSSHandler):
 
     def _format_prompt(self, messages, function):
         # Hermes use Langchain to OpenAI conversion. It does not use tool call but function call.
-        function = convert_to_tool(function, GORILLA_TO_OPENAPI, ModelStyle.OSSMODEL)
+        function = convert_to_tool(function, GORILLA_TO_OPENAPI, ModelStyle.HERMES)
         pydantic_format = """{"properties": {"arguments": {"title": "Arguments", "type": "object"}, "name": {"title": "Name", "type": "string"}}, "required": ["arguments", "name"], "title": "FunctionCall", "type": "object"}"""
         tool_call_format = """{"arguments": <args-dict>, "name": <function-name>}"""
         formatted_prompt = inspect.cleandoc(
@@ -60,8 +72,7 @@ class HermesHandler(OSSHandler):
                 flag = False
             else:
                 if flag:
-                    line = line.replace("'", '"')
-                    tool_result = json.loads(line)
+                    tool_result = parse_tool_call(line)
                     func_call.append({tool_result["name"]: tool_result["arguments"]})
                 flag = False
         return func_call
@@ -77,8 +88,7 @@ class HermesHandler(OSSHandler):
                 flag = False
             else:
                 if flag:
-                    line = line.replace("'", '"')
-                    tool_result = json.loads(line)
+                    tool_result = parse_tool_call(line)
                     function_call_list.append(
                         {tool_result["name"]: tool_result["arguments"]}
                     )
@@ -102,7 +112,10 @@ class HermesHandler(OSSHandler):
         return {"message": [], "function": functions}
 
     def _add_execution_results_prompting(
-        self, inference_data: dict, execution_results: list[str], model_response_data: dict
+        self,
+        inference_data: dict,
+        execution_results: list[str],
+        model_response_data: dict,
     ) -> dict:
         for execution_result, decoded_model_response in zip(
             execution_results, model_response_data["model_responses_decoded"]

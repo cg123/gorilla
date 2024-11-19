@@ -353,6 +353,15 @@ def simple_function_checker(
 
     model_params = model_output[func_name]
 
+    # Check parameters is a dictionary
+    if not isinstance(model_params, dict):
+        result["valid"] = False
+        result["error"].append(
+            f"Expected parameters to be a dictionary, got {type(model_params).__name__}."
+        )
+        result["error_type"] = "simple_function_checker:wrong_param_type"
+        return result
+
     # Check for required parameters in model output
     for param in required_params:
         if param not in model_params:
